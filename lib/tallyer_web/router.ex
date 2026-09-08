@@ -17,7 +17,7 @@ defmodule TallyerWeb.Router do
   scope "/", TallyerWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", Live.Home
   end
 
   # Other scopes may use custom stacks.

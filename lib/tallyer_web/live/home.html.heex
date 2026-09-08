@@ -1,0 +1,14 @@
+<Layouts.app flash={@flash}>
+  <div class="flex flex-col">
+    <h2 class="text-xl text-center mb-4">Create a Game</h2>
+    <.form for={@create_game_form} id="create_game_form" phx-submit="create_game">
+      <.input type="text" field={@create_game_form[:username]} />
+      <button type="submit" class="btn btn-primary h-auto" name="game_type" value="scoreboard">
+        <div>
+          <h3 class="text-lg text-center-py-1 ">Scoreboard</h3>
+          <p class="">Track the scores of players/teams in a game</p>
+        </div>
+      </button>
+    </.form>
+  </div>
+</Layouts.app>
