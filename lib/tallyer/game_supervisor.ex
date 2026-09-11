@@ -1,10 +1,14 @@
 defmodule Tallyer.GameSupervisor do
   use DynamicSupervisor
 
+  import Destructure
+
   alias Tallyer.Games
   alias Tallyer.Utils
 
   require Logger
+
+  @type creds :: %{id: String.t(), password: String.t()}
 
   def start_link(init_arg) do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
@@ -30,7 +34,27 @@ defmodule Tallyer.GameSupervisor do
     game_id
   end
 
-  def whereis_game(game_id), do: GenServer.whereis(via(game_id))
+  def game_exists?(game_id), do: not is_nil(whereis_game(game_id))
+
+  def game_type(game_id), do: send_message(game_id, :get_type)
+
+  def join_game(game_id, username) do
+    if game_exists?(game_id) do
+      Phoenix.PubSub.subscribe(Tallyer.PubSub, Utils.GameId.topic(game_id))
+      Logger.info("#{username} joining #{game_id}")
+
+      :ok
+    else
+      {:error, :unknown_game}
+    end
+  end
+
+  def send_message(game_id, message) do
+    cond do
+      pid = whereis_game(game_id) -> GenServer.call(pid, {:msg, message})
+      true -> {:error, :game_not_found}
+    end
+  end
 
   defp generate_game_id do
     game_id = Utils.GameId.generate()
@@ -38,6 +62,8 @@ defmodule Tallyer.GameSupervisor do
     # Make sure we haven't generated a game ID which already exists
     if whereis_game(game_id), do: generate_game_id(), else: game_id
   end
+
+  defp whereis_game(game_id), do: GenServer.whereis(via(game_id))
 
   defp via(game_id), do: {:via, Registry, {Tallyer.GameRegistry, game_id}}
 end

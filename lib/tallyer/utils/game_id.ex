@@ -16,4 +16,6 @@ defmodule Tallyer.Utils.GameId do
     |> Enum.take(6)
     |> Enum.join()
   end
+
+  def topic(game_id), do: "games:#{game_id}"
 end

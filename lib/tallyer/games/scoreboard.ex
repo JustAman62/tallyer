@@ -3,6 +3,7 @@ defmodule Tallyer.Games.Scoreboard do
 
   import Destructure
 
+  alias Tallyer.Games.Helper
   alias Tallyer.Types.Player
 
   @spec start_link(String.t()) :: GenServer.on_start()
@@ -13,7 +14,7 @@ defmodule Tallyer.Games.Scoreboard do
   @impl true
   def init(game_id) do
     state = %{
-      game_id: game_id,
+      creds: %{id: game_id, password: ""},
       players: %{},
       # A list of ordered player_names for sorting purposes
       player_names: [],
@@ -34,7 +35,23 @@ defmodule Tallyer.Games.Scoreboard do
   #
 
   @impl true
-  def handle_call({:add_player, username}, _from, state) do
+  def handle_call({:msg, payload}, _from, state) do
+    case Helper.handle_message(payload, state) do
+      {:error, :unhandled, state} ->
+        {res, state} = handle_message(payload, state)
+        {:reply, res, state}
+
+      {:error, reason, state} ->
+        {:reply, {:error, reason}, state}
+
+      {res, state} ->
+        {:reply, res, state}
+    end
+  end
+
+  def handle_message(:get_type, state), do: {:scoreboard, state}
+
+  def handle_message({:add_player, username}, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state),
          {:error, :player_not_found} <- ensure_player_exists(username, state) do
       state =
@@ -49,11 +66,10 @@ defmodule Tallyer.Games.Scoreboard do
           [new_player | players]
         end)
 
-      {:reply, :ok, state}
+      {:ok, state}
     else
       :ok ->
         {
-          :reply,
           {:error,
            """
            Player with name #{username} is already in this game
@@ -63,7 +79,6 @@ defmodule Tallyer.Games.Scoreboard do
 
       {:error, :invalid_game_state} ->
         {
-          :reply,
           {:error,
            """
            Cannot add a player after the game has started
@@ -73,19 +88,17 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  @impl true
-  def handle_call({:start_game, username}, _from, state) do
+  def handle_message({:start_game, username}, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state) do
       state =
         state
         |> log_event(:game_started, username, "#{username} started the game")
         |> Map.put(:game_state, :in_progress)
 
-      {:reply, :ok, state}
+      {:ok, state}
     else
       {:error, :invalid_game_state} ->
         {
-          :reply,
           {:error,
            """
            Game already started
@@ -95,7 +108,7 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  def handle_call({:add_points, username, player_name, score_to_add}, _from, state) do
+  def handle_message({:add_points, username, player_name, score_to_add}, state) do
     with :ok <- ensure_game_state(:in_progress, state),
          :ok <- ensure_player_exists(player_name, state) do
       state =
@@ -112,7 +125,6 @@ defmodule Tallyer.Games.Scoreboard do
     else
       {:error, :player_not_found} ->
         {
-          :reply,
           {:error,
            """
            Player #{player_name} not found
@@ -122,7 +134,6 @@ defmodule Tallyer.Games.Scoreboard do
 
       {:error, :invalid_game_state} ->
         {
-          :reply,
           {:error,
            """
            Game must be started before points can be added to a player

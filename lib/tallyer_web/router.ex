@@ -18,10 +18,7 @@ defmodule TallyerWeb.Router do
     pipe_through :browser
 
     live "/", Live.Home
+    live "/scoreboard/:game_id", Live.Games.Scoreboard
+    live "/:game_id", Live.GameRedirect
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", TallyerWeb do
-  #   pipe_through :api
-  # end
 end

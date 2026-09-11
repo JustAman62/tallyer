@@ -4,9 +4,12 @@ defmodule TallyerWeb.Live.Home do
   import Destructure
 
   @impl true
-  def handle_event("create_game", s(%{game_type}), socket) do
-    game_type = String.to_existing_atom(game_type)
-    Tallyer.GameSupervisor.new_game(game_type)
+  def handle_event("create_game", s(%{value}), socket) do
+    game_type = String.to_existing_atom(value)
+    game_id = Tallyer.GameSupervisor.new_game(game_type)
+
+    socket = socket |> redirect(to: ~p"/#{game_id}")
+
     {:noreply, socket}
   end
 end
