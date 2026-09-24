@@ -20,12 +20,12 @@ defmodule Tallyer.Games.Scoreboard do
       players: [
         %Player{
           player_id: 0,
-          name: "Home",
+          name: "HOME",
           score: 0
         },
         %Player{
           player_id: 1,
-          name: "Away",
+          name: "AWAY",
           score: 0
         }
       ],
@@ -47,10 +47,10 @@ defmodule Tallyer.Games.Scoreboard do
     do: GenServer.call(pid, {:msg, username, {:update_player, id, name, score}})
 
   def start_gane(pid, username),
-    do: GenServer.call(pid, {:msg, username, {:start_gane, username}})
+    do: GenServer.call(pid, {:msg, username, :start_game})
 
-  def add_points(pid, username, player_name, score),
-    do: GenServer.call(pid, {:msg, {:add_points, username, player_name, score}})
+  def add_points(pid, username, player_id, score),
+    do: GenServer.call(pid, {:msg, username, {:add_points, player_id, score}})
 
   #
 
@@ -112,7 +112,7 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  def handle_message({:update_player, id, name, score}, _username, d(%{players}) = state) do
+  def handle_message({:update_player, id, name, score}, _username, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state),
          {:ok, _player} <- player_by_id(id, state) do
       state =
@@ -143,11 +143,11 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  def handle_message({:start_game, username}, state) do
+  def handle_message(:start_game, username, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state) do
       state =
         state
-        |> log_event(:game_started, username, "#{username} started the game")
+        |> log_event(:game_started, username, "Started the game")
         |> Map.put(:game_state, :in_progress)
 
       {:ok, state}
@@ -163,12 +163,12 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  def handle_message({:add_points, username, player_id, score_to_add}, state) do
+  def handle_message({:add_points, player_id, score_to_add}, username, state) do
     with :ok <- ensure_game_state(:in_progress, state),
          {:ok, player} <- player_by_id(player_id, state) do
       state =
         state
-        |> log_event(:score_update, username, "Added #{score_to_add} points to #{player.name}")
+        |> log_event(:score_update, username, "#{score_to_add} points to #{player.name}")
         |> update_player(player_id, fn %Player{} = p ->
           %Player{p | score: p.score + score_to_add}
         end)
@@ -228,9 +228,9 @@ defmodule Tallyer.Games.Scoreboard do
 
   #
 
-  defp log_event(state, username, type, message) do
+  defp log_event(state, type, username, message) do
     Map.update!(state, :log, fn entries ->
-      entry = d(%{username, type, message})
+      entry = d(%{username, type, message, timestamp: DateTime.utc_now()})
       [entry | entries]
     end)
   end

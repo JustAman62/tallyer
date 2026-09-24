@@ -3,6 +3,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
 
   import Destructure
 
+  alias TallyerWeb.Components.Common
   alias Tallyer.GameSupervisor
   alias Tallyer.Games.Scoreboard, as: Game
   alias Tallyer.Types.Player
@@ -16,6 +17,11 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
           <.set_username_form />
         <% @game_state[:game_state] == :waiting_to_start -> %>
           <.waiting_to_start game={@game_state} />
+        <% @game_state[:game_state] == :in_progress and @screen == :manage_scores -> %>
+          <.manage_scores game={@game_state} />
+          <div class="flex mt-32">
+            <Common.game_log game={@game_state} class="mx-auto" />
+          </div>
         <% true -> %>
           Unknown
       <% end %>
@@ -23,9 +29,9 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     """
   end
 
-  def set_username_form(assigns) do
+  defp set_username_form(assigns) do
     ~H"""
-    <.form :let={f} for={%{}} phx-submit="submit_username">
+    <.form :let={f} for={%{}} phx-submit="submit_username" class="max-w-2xl mx-auto">
       <.input field={f[:username]} label="Username" placeholder="John Smith" required autofocus />
       <div class="flex justify-center">
         <button type="submit" class="btn btn-primary">Join Game</button>
@@ -34,16 +40,22 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     """
   end
 
-  def waiting_to_start(assigns) do
+  defp waiting_to_start(assigns) do
     ~H"""
-    <h2 class="text-xl font-bold text-center">Lobby</h2>
-    <div class="flex flex-col">
-      <.initial_player_state_form :for={player <- @game.players} player={player} />
+    <div class="max-w-2xl mx-auto">
+      <h2 class="text-xl font-bold text-center">Lobby</h2>
+      <div class="flex flex-col">
+        <.initial_player_state_form :for={player <- @game.players} player={player} />
+
+        <div class="flex justify-center mt-4">
+          <button type="button" class="btn btn-primary" phx-click="start_game">Start Game</button>
+        </div>
+      </div>
     </div>
     """
   end
 
-  def initial_player_state_form(%{player: d(%Player{player_id, name, score})} = assigns) do
+  defp initial_player_state_form(%{player: d(%Player{player_id, name, score})} = assigns) do
     assigns =
       assigns
       |> assign(:form, to_form(s(%{player_id, name, score})))
@@ -70,6 +82,70 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     """
   end
 
+  defp manage_scores(assigns) do
+    ~H"""
+    <div class="flex flex-wrap min-h-screen py-4 gap-4">
+      <div
+        :for={player <- @game.players}
+        class="@container outline rounded-lg p-4 min-w-sm flex flex-col grow"
+      >
+        <h3 class="text-[8cqw] font-bold text-center">{player.name}</h3>
+        <div class="text-[40cqh] font-mono font-semibold text-center my-auto">{player.score}</div>
+        <div class="join w-full">
+          <button
+            class="join-item grow btn bg-red-500 hover:opacity-80"
+            phx-click="update_score"
+            phx-value-amount="-3"
+            phx-value-player={player.player_id}
+          >
+            -3
+          </button>
+          <button
+            class="join-item grow btn bg-red-500/50 hover:opacity-80"
+            phx-click="update_score"
+            phx-value-amount="-2"
+            phx-value-player={player.player_id}
+          >
+            -2
+          </button>
+          <button
+            class="join-item grow btn bg-red-500/25 hover:opacity-80"
+            phx-click="update_score"
+            phx-value-amount="-1"
+            phx-value-player={player.player_id}
+          >
+            -1
+          </button>
+          <button
+            class="join-item grow btn bg-green-500/25 hover:opacity-80"
+            phx-click="update_score"
+            phx-value-amount="1"
+            phx-value-player={player.player_id}
+          >
+            +1
+          </button>
+          <button
+            class="join-item grow btn bg-green-500/50 hover:opacity-80"
+            phx-click="update_score"
+            phx-value-amount="2"
+            phx-value-player={player.player_id}
+          >
+            +2
+          </button>
+          <button
+            class="join-item grow btn bg-green-500 hover:opacity-80"
+            phx-click="update_score"
+            phx-value-amount="3"
+            phx-value-player={player.player_id}
+          >
+            +3
+          </button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   @impl true
   def mount(s(%{game_id}), _session, socket) do
     case GameSupervisor.join_game(game_id) do
@@ -78,6 +154,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
         |> assign(game_pid: game_pid)
         |> assign(game_id: game_id)
         |> assign(username: nil)
+        |> assign(screen: :manage_scores)
         |> then(&{:ok, &1})
 
       {:error, :unknown_game} ->
@@ -110,6 +187,35 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
       _ ->
         socket
         |> put_flash(:warning, "Invalid values submitted")
+        |> then(&{:noreply, &1})
+    end
+  end
+
+  def handle_event(
+        "start_game",
+        _params,
+        %{assigns: d(%{game_pid, username})} = socket
+      ) do
+    Game.start_gane(game_pid, username)
+    |> handle_game_response(socket)
+    |> then(&{:noreply, &1})
+  end
+
+  @impl true
+  def handle_event(
+        "update_score",
+        s(%{amount, player}),
+        %{assigns: d(%{game_pid, username})} = socket
+      ) do
+    with {player_id, _} <- Integer.parse(player),
+         {amount, _} <- Integer.parse(amount) do
+      Game.add_points(game_pid, username, player_id, amount)
+      |> handle_game_response(socket)
+      |> then(&{:noreply, &1})
+    else
+      _ ->
+        socket
+        |> put_flash(:warning, "Failed to update score")
         |> then(&{:noreply, &1})
     end
   end
