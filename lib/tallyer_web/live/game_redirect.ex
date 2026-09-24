@@ -9,12 +9,12 @@ defmodule TallyerWeb.Live.GameRedirect do
   def mount(s(%{game_id}), _session, socket) do
     socket =
       case GameSupervisor.game_type(game_id) do
-        {:error, :game_not_found} ->
+        {:error, :unknown_game} ->
           socket
           |> push_navigate(to: "/")
           |> put_flash(:error, "Game #{game_id} not found")
 
-        :scoreboard ->
+        {:ok, :scoreboard} ->
           socket
           |> push_navigate(to: "/scoreboard/#{game_id}")
       end

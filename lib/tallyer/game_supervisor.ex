@@ -1,8 +1,6 @@
 defmodule Tallyer.GameSupervisor do
   use DynamicSupervisor
 
-  import Destructure
-
   alias Tallyer.Games
   alias Tallyer.Utils
 
@@ -34,26 +32,29 @@ defmodule Tallyer.GameSupervisor do
     game_id
   end
 
-  def game_exists?(game_id), do: not is_nil(whereis_game(game_id))
+  def join_game(game_id) do
+    case whereis_game(game_id) do
+      nil ->
+        {:error, :unknown_game}
 
-  def game_type(game_id), do: send_message(game_id, :get_type)
-
-  def join_game(game_id, username) do
-    if game_exists?(game_id) do
-      Phoenix.PubSub.subscribe(Tallyer.PubSub, Utils.GameId.topic(game_id))
-      Logger.info("#{username} joining #{game_id}")
-
-      :ok
-    else
-      {:error, :unknown_game}
+      pid ->
+        Phoenix.PubSub.subscribe(Tallyer.PubSub, Utils.GameId.topic(game_id))
+        {:ok, pid}
     end
   end
 
-  def send_message(game_id, message) do
-    cond do
-      pid = whereis_game(game_id) -> GenServer.call(pid, {:msg, message})
-      true -> {:error, :game_not_found}
+  def game_type(game_id) do
+    case whereis_game(game_id) do
+      nil ->
+        {:error, :unknown_game}
+
+      pid ->
+        {:ok, GenServer.call(pid, {:common, :game_type})}
     end
+  end
+
+  def publish_new_state(game_id, state) do
+    Phoenix.PubSub.broadcast(Tallyer.PubSub, Utils.GameId.topic(game_id), {:new_state, state})
   end
 
   defp generate_game_id do
