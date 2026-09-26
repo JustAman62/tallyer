@@ -167,7 +167,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     <Common.balanced_grid class="py-4 gap-8 min-h-screen" item_min_width={350} item_min_height={250}>
       <div
         :for={player <- @game.players}
-        class="@container-size rounded-lg min-w-72 min-h-48 flex flex-col text-white grow"
+        class="@container-size rounded-lg min-w-72 min-h-48 flex flex-col text-white grow overflow-hidden"
         style={"background-color: #{player.colour}"}
       >
         <h3 class="text-[min(8cqw,15cqh)] font-mono font-bold text-center">{player.name}</h3>
@@ -177,7 +177,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
         <Common.balanced_grid class="w-full" item_min_width={100} item_min_height={16}>
           <button
             :for={d(%{label, score, colour}) <- Utils.ScoreSystem.scores(@game.settings.score_system)}
-            class="btn hover:opacity-80 h-12 rounded-none border-none"
+            class="btn hover:opacity-80 h-12 rounded-none border-transparent"
             phx-click="update_score"
             phx-value-amount={score}
             label={score}
