@@ -94,4 +94,86 @@ defmodule TallyerWeb.Components.Common do
     </script>
     """
   end
+
+  attr :id, :string
+  attr :item_min_width, :integer
+  attr :item_min_height, :integer
+  attr :class, :string
+  attr :rest, :global
+
+  slot :inner_block
+
+  def balanced_grid(assigns) do
+    ~H"""
+    <div
+      id="balanced-grid"
+      class={[
+        "balanced-grid",
+        @class
+      ]}
+      phx-hook=".BalancedGrid"
+      data-min-width={@item_min_width}
+      data-min-height={@item_min_height}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".BalancedGrid">
+      export default {
+        mounted() {
+          this.updateColumns()
+
+          this.handleResize = () => {
+            this.updateColumns()
+          }
+
+          window.addEventListener("resize", this.handleResize)
+        },
+
+        updated() {
+          this.updateColumns()
+        },
+
+        destroyed() {
+          window.removeEventListener("resize", this.handleResize)
+        },
+
+        updateColumns() {
+          const width = this.el.clientWidth
+          const itemCount = this.el.children.length
+
+          const minWidth = this.el.dataset.minWidth
+
+          if (itemCount === 0) {
+            this.el.style.setProperty("--columns", 1);
+            return;
+          }
+
+          // Maximum number of columns that can physically fit.
+          const maxColumns = Math.floor(
+            (width) / (minWidth)
+          )
+
+          // Can't have more columns than items.
+          const columns = Math.min(itemCount, maxColumns)
+
+          // Now that we know how many rows we need, figure out
+          // the number of columns that would fill in all the rows
+          // as full as possible
+          const numRows = Math.ceil(itemCount/columns)
+          const optimalColumns = Math.ceil(itemCount/numRows)
+
+          this.el.style.setProperty(
+            "--columns",
+            Math.max(1, optimalColumns)
+          );
+          this.el.style.setProperty(
+            "--item-min-height",
+            this.el.dataset.itemMinHeight
+          );
+        }
+      }
+    </script>
+    """
+  end
 end
