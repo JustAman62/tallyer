@@ -39,6 +39,7 @@ defmodule TallyerWeb.Components.Common do
         </div>
       </div>
       <div class="text-sm mt-auto">Username: {@username}</div>
+      <.link navigate="/" class="btn btn-error">Exit Game</.link>
     </div>
     """
   end
