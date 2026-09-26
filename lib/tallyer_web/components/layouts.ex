@@ -39,20 +39,20 @@ defmodule TallyerWeb.Layouts do
     <header class="drawer">
       <input id="my-drawer-1" type="checkbox" class="drawer-toggle" />
       <div class="drawer-content p-4 flex items-center">
-        <label for="my-drawer-1" class="btn btn-outline gap-1 items-center basis-32">
+        <label for="my-drawer-1" class="btn btn-outline gap-1 items-center basis-28">
           <.icon name="hero-bars-3" class="size-4" />
           <span class="text-md font-bold">Menu</span>
         </label>
         <div class="grow">
           <h1 class="font-semibold text-2xl text-center">Tallyer</h1>
         </div>
-        <div class="basis-32"></div>
+        <div class="basis-28"></div>
       </div>
-      <div class="drawer-side">
+      <div class="drawer-side h-dvh max-h-dvh pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
         <label for="my-drawer-1" aria-label="close sidebar" class="drawer-overlay"></label>
-        <div class="menu bg-base-200 min-h-full w-80 p-4">
+        <div class="menu bg-base-200 h-full w-80 p-4">
           <.link class="text-xl font-bold text-center" navigate="/">Tallyer</.link>
-          <div class="flex-1 flex flex-col">
+          <div class="flex-1 flex flex-col overflow-y-auto">
             {render_slot(@sidebar)}
           </div>
           <div class="flex justify-center">
