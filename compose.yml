@@ -1,0 +1,12 @@
+services:
+  app:
+    image: app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 4000:4000
+    environment:
+      SECRET_KEY_BASE: Jm1EuFveRaZ/sEH2kkZh6ZwQh3aq8n/pFcLs6OS3Z524ktilrTvkvTk/5bXgsgMo
+      PHX_HOST: localhost
+      PORT: 4000
