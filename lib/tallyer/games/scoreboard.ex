@@ -14,7 +14,7 @@ defmodule Tallyer.Games.Scoreboard do
     "#e80020",
     "#3671c6",
     "#0093cc",
-    "#27f4d2",
+    "#27f4d2"
   ]
 
   @spec start_link(String.t()) :: GenServer.on_start()
@@ -40,6 +40,9 @@ defmodule Tallyer.Games.Scoreboard do
           colour: Enum.at(@player_colours, 1)
         }
       ],
+      settings: %{
+        score_system: :rugby
+      },
       log: [],
       game_state: :waiting_to_start,
       last_activity: DateTime.utc_now()
@@ -58,11 +61,14 @@ defmodule Tallyer.Games.Scoreboard do
   def update_initial_player_state(pid, username, id, name, score, colour),
     do: GenServer.call(pid, {:msg, username, {:update_player, id, name, score, colour}})
 
+  def update_game_settings(pid, username, settings),
+    do: GenServer.call(pid, {:msg, username, {:update_game_settings, settings}})
+
   def start_game(pid, username),
     do: GenServer.call(pid, {:msg, username, :start_game})
 
-  def add_points(pid, username, player_id, score),
-    do: GenServer.call(pid, {:msg, username, {:add_points, player_id, score}})
+  def add_points(pid, username, player_id, score, label),
+    do: GenServer.call(pid, {:msg, username, {:add_points, player_id, score, label}})
 
   #
 
@@ -86,7 +92,7 @@ defmodule Tallyer.Games.Scoreboard do
 
   def handle_message(:game_state, _username, state), do: {state, state}
 
-  def handle_message(:add_player , username, state) do
+  def handle_message(:add_player, username, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state),
          {:error, :player_not_found} <- player_by_name(username, state) do
       state =
@@ -157,6 +163,10 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
+  def handle_message({:update_game_settings, settings}, _username, state) do
+    state |> Map.put(:settings, settings) |> then(&{:ok, &1})
+  end
+
   def handle_message(:start_game, username, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state) do
       state =
@@ -177,12 +187,16 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  def handle_message({:add_points, player_id, score_to_add}, username, state) do
+  def handle_message({:add_points, player_id, score_to_add, label}, username, state) do
     with :ok <- ensure_game_state(:in_progress, state),
          {:ok, player} <- player_by_id(player_id, state) do
       state =
         state
-        |> log_event(:score_update, username, "#{score_to_add} points to #{player.name}")
+        |> log_event(
+          :score_update,
+          username,
+          "#{label} (#{score_to_add} points) to #{player.name}"
+        )
         |> update_player(player_id, fn %Player{} = p ->
           %Player{p | score: p.score + score_to_add}
         end)

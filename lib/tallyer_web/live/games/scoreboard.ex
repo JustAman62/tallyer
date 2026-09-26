@@ -3,10 +3,11 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
 
   import Destructure
 
-  alias TallyerWeb.Components.Common
   alias Tallyer.GameSupervisor
   alias Tallyer.Games.Scoreboard, as: Game
   alias Tallyer.Types.Player
+  alias Tallyer.Utils
+  alias TallyerWeb.Components.Common
 
   @impl true
   def render(assigns) do
@@ -26,6 +27,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
       <Layouts.app flash={@flash}>
         <:sidebar>
           <Common.game_info :if={not is_nil(@username)} game={@game_state} username={@username} />
+          <.game_settings_form :if={not is_nil(@username)} game={@game_state} />
         </:sidebar>
 
         <%= cond do %>
@@ -80,6 +82,10 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
           <span>Add Player</span>
         </button>
 
+        <div>
+          <.game_settings_form game={@game} />
+        </div>
+
         <div class="flex flex-col items-center">
           <p>Use the Game Code below to join on other devices</p>
           <Common.copy_button id="copy-game-id" value={@game.game_id} class="font-mono text-lg mt-4">
@@ -132,6 +138,30 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     """
   end
 
+  defp game_settings_form(%{game: %{settings: d(%{score_system})}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:form, to_form(s(%{score_system})))
+      |> assign(:score_systems, Utils.ScoreSystem.systems())
+
+    ~H"""
+    <.form
+      :let={f}
+      for={@form}
+      class=""
+      phx-change="update_game_settings"
+    >
+      <.input
+        field={f[:score_system]}
+        type="select"
+        id="settings-score-system"
+        options={@score_systems}
+        label="Scoring System"
+      />
+    </.form>
+    """
+  end
+
   defp manage_scores(assigns) do
     ~H"""
     <.board_grid class="py-4 gap-8" count={length(@game.players)}>
@@ -146,52 +176,16 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
         </div>
         <div class="join w-full">
           <button
-            class="join-item grow btn bg-red-600 hover:opacity-80"
+            :for={d(%{label, score, colour}) <- Utils.ScoreSystem.scores(@game.settings.score_system)}
+            class="join-item grow btn hover:opacity-80"
             phx-click="update_score"
-            phx-value-amount="-3"
+            phx-value-amount={score}
+            label={score}
+            phx-value-label={label}
             phx-value-player={player.player_id}
+            style={"background-color: #{colour}"}
           >
-            -3
-          </button>
-          <button
-            class="join-item grow btn bg-red-500 hover:opacity-80"
-            phx-click="update_score"
-            phx-value-amount="-2"
-            phx-value-player={player.player_id}
-          >
-            -2
-          </button>
-          <button
-            class="join-item grow btn bg-red-400 hover:opacity-80"
-            phx-click="update_score"
-            phx-value-amount="-1"
-            phx-value-player={player.player_id}
-          >
-            -1
-          </button>
-          <button
-            class="join-item grow btn bg-green-500 hover:opacity-80"
-            phx-click="update_score"
-            phx-value-amount="1"
-            phx-value-player={player.player_id}
-          >
-            +1
-          </button>
-          <button
-            class="join-item grow btn bg-green-500 hover:opacity-80"
-            phx-click="update_score"
-            phx-value-amount="2"
-            phx-value-player={player.player_id}
-          >
-            +2
-          </button>
-          <button
-            class="join-item grow btn bg-green-600 hover:opacity-80"
-            phx-click="update_score"
-            phx-value-amount="3"
-            phx-value-player={player.player_id}
-          >
-            +3
+            {label}
           </button>
         </div>
       </div>
@@ -335,6 +329,25 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
   end
 
   def handle_event(
+        "update_game_settings",
+        s(%{score_system}),
+        %{assigns: d(%{game_pid, username})} = socket
+      ) do
+    score_system = String.to_existing_atom(score_system)
+
+    with true <- Utils.ScoreSystem.valid_system?(score_system) do
+      Game.update_game_settings(game_pid, username, d(%{score_system}))
+      |> handle_game_response(socket)
+      |> then(&{:noreply, &1})
+    else
+      _ ->
+        socket
+        |> put_flash(:warning, "Invalid values submitted")
+        |> then(&{:noreply, &1})
+    end
+  end
+
+  def handle_event(
         "start_game",
         _params,
         %{assigns: d(%{game_pid, username})} = socket
@@ -356,12 +369,12 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
 
   def handle_event(
         "update_score",
-        s(%{amount, player}),
+        s(%{amount, label, player}),
         %{assigns: d(%{game_pid, username})} = socket
       ) do
     with {player_id, _} <- Integer.parse(player),
          {amount, _} <- Integer.parse(amount) do
-      Game.add_points(game_pid, username, player_id, amount)
+      Game.add_points(game_pid, username, player_id, amount, label)
       |> handle_game_response(socket)
       |> then(&{:noreply, &1})
     else
