@@ -174,10 +174,10 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
         <div class="text-[35cqh] font-mono font-semibold text-center my-auto">
           {player.score}
         </div>
-        <Common.balanced_grid class="join w-full" item_min_width={100} item_min_height={16}>
+        <Common.balanced_grid class="w-full" item_min_width={100} item_min_height={16}>
           <button
             :for={d(%{label, score, colour}) <- Utils.ScoreSystem.scores(@game.settings.score_system)}
-            class="join-item grow btn hover:opacity-80 basis-1 h-12"
+            class="btn hover:opacity-80 h-12 rounded-none border-none"
             phx-click="update_score"
             phx-value-amount={score}
             label={score}
