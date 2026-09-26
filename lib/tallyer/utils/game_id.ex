@@ -3,7 +3,7 @@ defmodule Tallyer.Utils.GameId do
   Utilities for generating Game IDs.
   """
 
-  @alphabet String.codepoints("ABCDEFGHKMNPQRTUVWXYZ")
+  @alphabet String.codepoints("ABCDEFGHKPQRTUVWXYZ")
 
   @doc """
   Generates a unique 6-character Game ID.

@@ -5,6 +5,8 @@ defmodule TallyerWeb.Layouts do
   """
   use TallyerWeb, :html
 
+  alias TallyerWeb.Components.Common
+
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
   # skeleton of your application, namely HTML headers
@@ -26,7 +28,6 @@ defmodule TallyerWeb.Layouts do
 
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
-  attr :game_id, :string, required: false, default: ""
 
   attr :current_scope, :map,
     default: nil,
@@ -48,8 +49,8 @@ defmodule TallyerWeb.Layouts do
       <div class="drawer-side">
         <label for="my-drawer-1" aria-label="close sidebar" class="drawer-overlay"></label>
         <div class="menu bg-base-200 min-h-full w-80 p-4">
-          <span class="text-xl font-bold text-center">Tallyer</span>
-          <div class="flex-1">
+          <.link class="text-xl font-bold text-center" navigate="/">Tallyer</.link>
+          <div class="flex-1 flex flex-col">
             {render_slot(@sidebar)}
           </div>
           <div class="flex justify-center">
@@ -59,7 +60,7 @@ defmodule TallyerWeb.Layouts do
       </div>
     </header>
 
-    <main class="px-4 py-4 sm:px-6 lg:px-8">
+    <main class="px-4 py-4 md:px-6 lg:px-8">
       <div class="mx-auto space-y-4">
         {render_slot(@inner_block)}
       </div>

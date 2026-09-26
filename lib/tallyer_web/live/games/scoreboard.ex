@@ -11,21 +11,47 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
-      <%= cond do %>
-        <% is_nil(@username) -> %>
-          <.set_username_form />
-        <% @game_state[:game_state] == :waiting_to_start -> %>
-          <.waiting_to_start game={@game_state} />
-        <% @game_state[:game_state] == :in_progress and @screen == :manage_scores -> %>
-          <.manage_scores game={@game_state} />
-          <div class="flex mt-32">
-            <Common.game_log game={@game_state} class="mx-auto" />
-          </div>
-        <% true -> %>
-          Unknown
-      <% end %>
-    </Layouts.app>
+    <%= if not is_nil(@username) and @game_state[:game_state] == :in_progress and @screen == :scoreboard_only do %>
+      <.scoreboard_only game={@game_state} />
+      <div class="mt-32 mb-8 flex justify-center">
+        <button
+          class="btn btn-primary "
+          phx-click="change_screen"
+          phx-value-screen={:manage_scores}
+        >
+          Back to Manage Scores
+        </button>
+      </div>
+    <% else %>
+      <Layouts.app flash={@flash}>
+        <:sidebar>
+          <Common.game_info :if={not is_nil(@username)} game={@game_state} username={@username} />
+        </:sidebar>
+
+        <%= cond do %>
+          <% is_nil(@username) -> %>
+            <.set_username_form />
+          <% @game_state[:game_state] == :waiting_to_start -> %>
+            <.waiting_to_start game={@game_state} />
+          <% @game_state[:game_state] == :in_progress and @screen == :manage_scores -> %>
+            <.manage_scores game={@game_state} />
+            <div class="mt-32 flex justify-center">
+              <button
+                class="btn btn-primary mt-32 mx-auto"
+                phx-click="change_screen"
+                phx-value-screen={:scoreboard_only}
+              >
+                Only Show Scoreboard
+              </button>
+            </div>
+            <div class="flex mt-8">
+              <Common.game_log game={@game_state} class="mx-auto" />
+            </div>
+          <% true -> %>
+            Unknown
+        <% end %>
+      </Layouts.app>
+    <% end %>
     """
   end
 
@@ -55,10 +81,10 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     """
   end
 
-  defp initial_player_state_form(%{player: d(%Player{player_id, name, score})} = assigns) do
+  defp initial_player_state_form(%{player: d(%Player{player_id, name, score, colour})} = assigns) do
     assigns =
       assigns
-      |> assign(:form, to_form(s(%{player_id, name, score})))
+      |> assign(:form, to_form(s(%{player_id, name, score, colour})))
       |> assign(:player_id, player_id)
 
     ~H"""
@@ -70,6 +96,14 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     >
       <.input field={f[:player_id]} id={"player_id-#{@player_id}"} type="hidden" />
       <.input field={f[:name]} id={"name-#{@player_id}"} label="Name" required phx-debounce="1000" />
+      <.input
+        field={f[:colour]}
+        type="color"
+        id={"colour-#{@player_id}"}
+        label="Colour"
+        required
+        phx-debounce="1000"
+      />
       <.input
         field={f[:score]}
         id={"score-#{@player_id}"}
@@ -84,16 +118,17 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
 
   defp manage_scores(assigns) do
     ~H"""
-    <div class="flex flex-wrap min-h-screen py-4 gap-4">
+    <div class="flex flex-wrap min-h-screen py-4 gap-8">
       <div
         :for={player <- @game.players}
-        class="@container outline rounded-lg p-4 min-w-sm flex flex-col grow"
+        class="@container rounded-lg min-w-72 flex flex-col grow text-white"
+        style={"background-color: #{player.colour}"}
       >
-        <h3 class="text-[8cqw] font-bold text-center">{player.name}</h3>
-        <div class="text-[40cqh] font-mono font-semibold text-center my-auto">{player.score}</div>
+        <h3 class="text-[8cqw] font-mono font-bold text-center">{player.name}</h3>
+        <div class="text-[40cqw] font-mono font-semibold text-center my-auto">{player.score}</div>
         <div class="join w-full">
           <button
-            class="join-item grow btn bg-red-500 hover:opacity-80"
+            class="join-item grow btn bg-red-600 hover:opacity-80"
             phx-click="update_score"
             phx-value-amount="-3"
             phx-value-player={player.player_id}
@@ -101,7 +136,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
             -3
           </button>
           <button
-            class="join-item grow btn bg-red-500/50 hover:opacity-80"
+            class="join-item grow btn bg-red-500 hover:opacity-80"
             phx-click="update_score"
             phx-value-amount="-2"
             phx-value-player={player.player_id}
@@ -109,7 +144,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
             -2
           </button>
           <button
-            class="join-item grow btn bg-red-500/25 hover:opacity-80"
+            class="join-item grow btn bg-red-400 hover:opacity-80"
             phx-click="update_score"
             phx-value-amount="-1"
             phx-value-player={player.player_id}
@@ -117,7 +152,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
             -1
           </button>
           <button
-            class="join-item grow btn bg-green-500/25 hover:opacity-80"
+            class="join-item grow btn bg-green-500 hover:opacity-80"
             phx-click="update_score"
             phx-value-amount="1"
             phx-value-player={player.player_id}
@@ -125,7 +160,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
             +1
           </button>
           <button
-            class="join-item grow btn bg-green-500/50 hover:opacity-80"
+            class="join-item grow btn bg-green-500 hover:opacity-80"
             phx-click="update_score"
             phx-value-amount="2"
             phx-value-player={player.player_id}
@@ -133,7 +168,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
             +2
           </button>
           <button
-            class="join-item grow btn bg-green-500 hover:opacity-80"
+            class="join-item grow btn bg-green-600 hover:opacity-80"
             phx-click="update_score"
             phx-value-amount="3"
             phx-value-player={player.player_id}
@@ -141,6 +176,21 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
             +3
           </button>
         </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp scoreboard_only(assigns) do
+    ~H"""
+    <div class="flex flex-wrap min-h-screen">
+      <div
+        :for={player <- @game.players}
+        class="@container min-w-72 flex flex-col grow text-white"
+        style={"background-color: #{player.colour}"}
+      >
+        <h3 class="text-[8cqw] font-mono font-bold text-center">{player.name}</h3>
+        <div class="text-[40cqw] font-mono font-semibold text-center my-auto">{player.score}</div>
       </div>
     </div>
     """
@@ -175,12 +225,12 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
 
   def handle_event(
         "update_player",
-        s(%{player_id, name, score}),
+        s(%{player_id, name, score, colour}),
         %{assigns: d(%{game_pid, username})} = socket
       ) do
     with {player_id, _} <- Integer.parse(player_id),
          {score, _} <- Integer.parse(score) do
-      Game.update_initial_player_state(game_pid, username, player_id, name, score)
+      Game.update_initial_player_state(game_pid, username, player_id, name, score, colour)
       |> handle_game_response(socket)
       |> then(&{:noreply, &1})
     else
@@ -196,7 +246,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
         _params,
         %{assigns: d(%{game_pid, username})} = socket
       ) do
-    Game.start_gane(game_pid, username)
+    Game.start_game(game_pid, username)
     |> handle_game_response(socket)
     |> then(&{:noreply, &1})
   end
@@ -218,6 +268,12 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
         |> put_flash(:warning, "Failed to update score")
         |> then(&{:noreply, &1})
     end
+  end
+
+  def handle_event("change_screen", s(%{screen}), socket) do
+    socket
+    |> assign(:screen, String.to_existing_atom(screen))
+    |> then(&{:noreply, &1})
   end
 
   defp handle_game_response({:ok, game_state}, socket),

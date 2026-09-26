@@ -8,6 +8,15 @@ defmodule Tallyer.Games.Scoreboard do
 
   require Logger
 
+  @player_colours [
+    "#ff8000",
+    "#e80020",
+    "#27f4d2",
+    "#3671c6",
+    "#64c4ff",
+    "#0093cc"
+  ]
+
   @spec start_link(String.t()) :: GenServer.on_start()
   def start_link(d([game_id, name])) do
     GenServer.start_link(__MODULE__, game_id, name: name)
@@ -21,16 +30,19 @@ defmodule Tallyer.Games.Scoreboard do
         %Player{
           player_id: 0,
           name: "HOME",
-          score: 0
+          score: 0,
+          colour: Enum.at(@player_colours, 0)
         },
         %Player{
           player_id: 1,
           name: "AWAY",
-          score: 0
+          score: 0,
+          colour: Enum.at(@player_colours, 1)
         }
       ],
       log: [],
-      game_state: :waiting_to_start
+      game_state: :waiting_to_start,
+      last_activity: DateTime.utc_now()
     }
 
     {:ok, state}
@@ -43,10 +55,10 @@ defmodule Tallyer.Games.Scoreboard do
   def add_player(pid, username),
     do: GenServer.call(pid, {:msg, username, {:add_player, username}})
 
-  def update_initial_player_state(pid, username, id, name, score),
-    do: GenServer.call(pid, {:msg, username, {:update_player, id, name, score}})
+  def update_initial_player_state(pid, username, id, name, score, colour),
+    do: GenServer.call(pid, {:msg, username, {:update_player, id, name, score, colour}})
 
-  def start_gane(pid, username),
+  def start_game(pid, username),
     do: GenServer.call(pid, {:msg, username, :start_game})
 
   def add_points(pid, username, player_id, score),
@@ -59,6 +71,8 @@ defmodule Tallyer.Games.Scoreboard do
 
   def handle_call({:msg, username, payload}, _from, state) do
     Logger.info("[#{state.game_id}-#{username}]: #{inspect(payload)}")
+
+    state = Map.put(state, :last_activity, DateTime.utc_now())
 
     case handle_message(payload, username, state) do
       {:ok, new_state} ->
@@ -84,7 +98,8 @@ defmodule Tallyer.Games.Scoreboard do
           new_player = %Player{
             player_id: max_id + 1,
             name: username,
-            score: 0
+            score: 0,
+            colour: Enum.at(@player_colours, rem(max_id, length(@player_colours)))
           }
 
           players ++ [new_player]
@@ -112,13 +127,13 @@ defmodule Tallyer.Games.Scoreboard do
     end
   end
 
-  def handle_message({:update_player, id, name, score}, _username, state) do
+  def handle_message({:update_player, id, name, score, colour}, _username, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state),
          {:ok, _player} <- player_by_id(id, state) do
       state =
         state
         |> update_player(id, fn %Player{} = p ->
-          %Player{p | name: name, score: score}
+          %Player{p | name: name, score: score, colour: colour}
         end)
 
       {:ok, state}
