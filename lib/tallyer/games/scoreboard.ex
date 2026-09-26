@@ -9,12 +9,12 @@ defmodule Tallyer.Games.Scoreboard do
   require Logger
 
   @player_colours [
+    "#64c4ff",
     "#ff8000",
     "#e80020",
-    "#27f4d2",
     "#3671c6",
-    "#64c4ff",
-    "#0093cc"
+    "#0093cc",
+    "#27f4d2",
   ]
 
   @spec start_link(String.t()) :: GenServer.on_start()
@@ -28,13 +28,13 @@ defmodule Tallyer.Games.Scoreboard do
       game_id: game_id,
       players: [
         %Player{
-          player_id: 0,
+          player_id: 1,
           name: "HOME",
           score: 0,
           colour: Enum.at(@player_colours, 0)
         },
         %Player{
-          player_id: 1,
+          player_id: 2,
           name: "AWAY",
           score: 0,
           colour: Enum.at(@player_colours, 1)

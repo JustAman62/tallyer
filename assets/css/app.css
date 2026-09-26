@@ -100,6 +100,19 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 /* Make LiveView wrapper divs transparent for layout */
-[data-phx-session], [data-phx-teleported-src] { display: contents }
+[data-phx-session],
+[data-phx-teleported-src] {
+  display: contents
+}
 
 /* This file is for your main application CSS */
+
+.board-grid {
+  --min-item-height: 250px;
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--min-item-height), 1fr);
+
+  min-height: 100vh;
+}

@@ -134,14 +134,16 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
 
   defp manage_scores(assigns) do
     ~H"""
-    <div class="flex flex-wrap min-h-screen py-4 gap-8">
+    <.board_grid class="py-4 gap-8" count={length(@game.players)}>
       <div
         :for={player <- @game.players}
-        class="@container rounded-lg min-w-72 flex flex-col text-white flex-[1_1_1]"
+        class="@container-size rounded-lg min-w-72 min-h-48 flex flex-col text-white grow"
         style={"background-color: #{player.colour}"}
       >
-        <h3 class="text-[8cqw] font-mono font-bold text-center">{player.name}</h3>
-        <div class="text-[40cqw] font-mono font-semibold text-center my-auto">{player.score}</div>
+        <h3 class="text-[min(8cqw,15cqh)] font-mono font-bold text-center">{player.name}</h3>
+        <div class="text-[35cqh] font-mono font-semibold text-center my-auto">
+          {player.score}
+        </div>
         <div class="join w-full">
           <button
             class="join-item grow btn bg-red-600 hover:opacity-80"
@@ -193,22 +195,97 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
           </button>
         </div>
       </div>
-    </div>
+    </.board_grid>
     """
   end
 
   defp scoreboard_only(assigns) do
     ~H"""
-    <div class="flex flex-wrap min-h-screen">
+    <.board_grid count={length(@game.players)}>
       <div
         :for={player <- @game.players}
-        class="@container min-w-72 flex flex-col grow text-white"
+        class="@container-size min-w-72 flex flex-col grow text-white"
         style={"background-color: #{player.colour}"}
       >
-        <h3 class="text-[8cqw] font-mono font-bold text-center">{player.name}</h3>
-        <div class="text-[40cqw] font-mono font-semibold text-center my-auto">{player.score}</div>
+        <h3 class="text-[min(8cqw,15cqh)] font-mono font-bold text-center">{player.name}</h3>
+        <div class="text-[35cqh] font-mono font-semibold text-center my-auto">
+          {player.score}
+        </div>
       </div>
+    </.board_grid>
+    """
+  end
+
+  attr :class, :string, default: ""
+  attr :count, :integer
+  slot :inner_block, required: true
+
+  defp board_grid(assigns) do
+    ~H"""
+    <div
+      id="board-grid"
+      class={[
+        "board-grid",
+        @class
+      ]}
+      phx-hook=".BoardGrid"
+    >
+      {render_slot(@inner_block)}
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".BoardGrid">
+      export default {
+        mounted() {
+          this.updateColumns()
+
+          this.handleResize = () => {
+            this.updateColumns()
+          }
+
+          window.addEventListener("resize", this.handleResize)
+        },
+
+        updated() {
+          this.updateColumns()
+        },
+
+        destroyed() {
+          window.removeEventListener("resize", this.handleResize)
+        },
+
+        updateColumns() {
+          const width = this.el.clientWidth
+          const itemCount = this.el.children.length
+
+          const minWidth = 350
+
+          if (itemCount === 0) {
+            this.el.style.setProperty("--columns", 1);
+            return;
+          }
+
+          // Maximum number of columns that can physically fit.
+          const maxColumns = Math.floor(
+            (width) / (minWidth)
+          )
+
+          // Can't have more columns than items.
+          const columns = Math.min(itemCount, maxColumns)
+
+          // Now that we know how many rows we need, figure out
+          // the number of columns that would fill in all the rows
+          // as full as possible
+          const numRows = Math.ceil(itemCount/columns)
+          const optimalColumns = Math.ceil(itemCount/numRows)
+
+          console.log(numRows, optimalColumns)
+
+          this.el.style.setProperty(
+            "--columns",
+            Math.max(1, optimalColumns)
+          );
+        }
+      }
+    </script>
     """
   end
 
