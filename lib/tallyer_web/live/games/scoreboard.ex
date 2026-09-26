@@ -70,12 +70,27 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     ~H"""
     <div class="max-w-2xl mx-auto">
       <h2 class="text-xl font-bold text-center">Lobby</h2>
-      <div class="flex flex-col">
-        <.initial_player_state_form :for={player <- @game.players} player={player} />
-
-        <div class="flex justify-center mt-4">
-          <button type="button" class="btn btn-primary" phx-click="start_game">Start Game</button>
+      <div class="flex flex-col gap-8">
+        <div>
+          <.initial_player_state_form :for={player <- @game.players} player={player} />
         </div>
+
+        <button type="button" class="btn btn-accent" phx-click="add_player">
+          <.icon name="hero-plus" />
+          <span>Add Player</span>
+        </button>
+
+        <div class="flex flex-col items-center">
+          <p>Use the Game Code below to join on other devices</p>
+          <Common.copy_button id="copy-game-id" value={@game.game_id} class="font-mono text-lg mt-4">
+            Game Code: {@game.game_id}
+          </Common.copy_button>
+        </div>
+
+        <button type="button" class="btn btn-primary" phx-click="start_game">
+          <.icon name="hero-arrow-right" />
+          <span>Start Game</span>
+        </button>
       </div>
     </div>
     """
@@ -99,6 +114,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
       <.input
         field={f[:colour]}
         type="color"
+        class="w-full input p-0"
         id={"colour-#{@player_id}"}
         label="Colour"
         required
@@ -121,7 +137,7 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     <div class="flex flex-wrap min-h-screen py-4 gap-8">
       <div
         :for={player <- @game.players}
-        class="@container rounded-lg min-w-72 flex flex-col grow text-white"
+        class="@container rounded-lg min-w-72 flex flex-col text-white flex-[1_1_1]"
         style={"background-color: #{player.colour}"}
       >
         <h3 class="text-[8cqw] font-mono font-bold text-center">{player.name}</h3>
@@ -251,7 +267,16 @@ defmodule TallyerWeb.Live.Games.Scoreboard do
     |> then(&{:noreply, &1})
   end
 
-  @impl true
+  def handle_event(
+        "add_player",
+        _params,
+        %{assigns: d(%{game_pid, username})} = socket
+      ) do
+    Game.add_player(game_pid, username)
+    |> handle_game_response(socket)
+    |> then(&{:noreply, &1})
+  end
+
   def handle_event(
         "update_score",
         s(%{amount, player}),

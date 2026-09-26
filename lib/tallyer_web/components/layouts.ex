@@ -5,8 +5,6 @@ defmodule TallyerWeb.Layouts do
   """
   use TallyerWeb, :html
 
-  alias TallyerWeb.Components.Common
-
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
   # skeleton of your application, namely HTML headers
@@ -40,11 +38,15 @@ defmodule TallyerWeb.Layouts do
     ~H"""
     <header class="drawer">
       <input id="my-drawer-1" type="checkbox" class="drawer-toggle" />
-      <div class="drawer-content p-4">
-        <label for="my-drawer-1" class="btn btn-outline gap-1 items-center">
+      <div class="drawer-content p-4 flex items-center">
+        <label for="my-drawer-1" class="btn btn-outline gap-1 items-center basis-32">
           <.icon name="hero-bars-3" class="size-4" />
-          <span class="text-md font-bold">Tallyer</span>
+          <span class="text-md font-bold">Menu</span>
         </label>
+        <div class="grow">
+          <h1 class="font-semibold text-2xl text-center">Tallyer</h1>
+        </div>
+        <div class="basis-32"></div>
       </div>
       <div class="drawer-side">
         <label for="my-drawer-1" aria-label="close sidebar" class="drawer-overlay"></label>

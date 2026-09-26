@@ -53,7 +53,7 @@ defmodule Tallyer.Games.Scoreboard do
   def game_state(pid, username), do: GenServer.call(pid, {:msg, username, :game_state})
 
   def add_player(pid, username),
-    do: GenServer.call(pid, {:msg, username, {:add_player, username}})
+    do: GenServer.call(pid, {:msg, username, :add_player})
 
   def update_initial_player_state(pid, username, id, name, score, colour),
     do: GenServer.call(pid, {:msg, username, {:update_player, id, name, score, colour}})
@@ -86,20 +86,19 @@ defmodule Tallyer.Games.Scoreboard do
 
   def handle_message(:game_state, _username, state), do: {state, state}
 
-  def handle_message({:add_player, username}, username, state) do
+  def handle_message(:add_player , username, state) do
     with :ok <- ensure_game_state(:waiting_to_start, state),
          {:error, :player_not_found} <- player_by_name(username, state) do
       state =
         state
-        |> log_event(:player_joined, username, "Player #{username} added")
         |> Map.update!(:players, fn players ->
-          max_id = Enum.max_by(players, & &1.player_id).player_id
+          new_id = Enum.max_by(players, & &1.player_id).player_id + 1
 
           new_player = %Player{
-            player_id: max_id + 1,
-            name: username,
+            player_id: new_id,
+            name: "Player #{new_id}",
             score: 0,
-            colour: Enum.at(@player_colours, rem(max_id, length(@player_colours)))
+            colour: Enum.at(@player_colours, rem(new_id, length(@player_colours)))
           }
 
           players ++ [new_player]
